@@ -121,4 +121,4 @@ if __name__ == "__main__":
 
     # Save to CSV
     merged_df.to_csv("merged_stock_news.csv", index=False)
-    print("✅ Merged dataset saved as merged_stock_news.csv")
+    print(" Merged dataset saved as merged_stock_news.csv")
