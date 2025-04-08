@@ -1,33 +1,57 @@
-from psaw import PushshiftAPI
-import datetime as dt
+
+# In order to request a temp auth token from reddit
+
+with open('api_pw.txt', 'r') as f:
+    SECRET_KEY = f.read()
+
+CLIENT_ID = 'tCA_H1FzGCBfUTWfOa_IvA'
+
+import requests
 import pandas as pd
 
-#Initialize Pushshift API
-api = PushshiftAPI()
+auth = requests.auth.HTTPBasicAuth(CLIENT_ID , SECRET_KEY)
 
-#Parameters
-stock_ticker = 'GME'
-subreddit = 'wallstreetbets'
-start_date = dt.datetime(2021, 1, 1)
-end_date = dt.datetime(2021, 3, 1)
+with open('r_pw.txt', 'r') as f:
+    pw = f.read()
 
-start_ts = int(start_date.timestamp())
-end_ts = int(end_date.timestamp())
+data = {
+    'grant_type': 'password',
+    'username': 'Master-County9017',
+    'password': pw
+}
 
-#Fetch posts
-print(f"Fetching posts mentioning '{stock_ticker}' in r/{subreddit}...")
-posts = api.search_submissions(q=stock_ticker,
-                                subreddit=subreddit,
-                                after=start_ts,
-                                before=end_ts,
-                                filter=['created_utc', 'title'],
-                                limit=10000)
+headers = {'User-Agent': 'MyAPI/0.0.1'}
 
-#Extract and structure the data
-data = [{
-    'date': dt.fromtimestamp(post.created_utc.timezone.utc).strftime('%Y-%m-%d'),
-    'title': post.title
-} for post in posts]
+res = requests.post('https://www.reddit.com/api/v1/access_token',
+                    auth=auth, data=data, headers=headers)
 
-df = pd.DataFrame(data)
-print(f"Collected {len(df)} posts.")
+TOKEN = res.json()['access_token']
+
+headers['Authorization'] = f'bearer {TOKEN}'
+
+# Gets 100 data items from the 'stocks' subreddit on the 'new' page
+res = requests.get('https://oauth.reddit.com/r/stocks/new',
+                   headers=headers, params={'limit': '100'})
+
+res.json()
+
+posts = []
+
+for post in res.json()['data']['children']:
+    posts.append({
+        'subreddit': post['data']['subreddit'],
+        'title': post['data']['title'],
+        'selftext': post['data']['selftext'],
+        'upvote_ratio': post['data']['upvote_ratio'],
+        'score': post['data']['score'],
+        'created_utc': post['data']['created_utc']
+    })
+
+df = pd.DataFrame(posts)
+
+# To view the possible items we can add for data filtering
+#print(post['data'].keys())
+
+#print(df)
+
+df.to_csv("reddit-data.csv", index=False)
