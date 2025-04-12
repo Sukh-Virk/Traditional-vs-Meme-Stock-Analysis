@@ -9,7 +9,7 @@ from sklearn.metrics import classification_report, confusion_matrix, ConfusionMa
 import matplotlib.pyplot as plt
 
 # Load data and drop missing values
-df = pd.read_csv("merged_stock_news.csv", parse_dates=["Date"])
+df = pd.read_csv("StockandSentiment.csv", parse_dates=["Date"])
 df = df.dropna(subset=["Headline", "Sentiment"])
 
 # Feature engineering
@@ -34,7 +34,12 @@ X_test_scaled = scaler.transform(X_test)
 
 # Initialize models
 models = {
-    "Random Forest": RandomForestClassifier(n_estimators=100),
+    "Random Forest": RandomForestClassifier(
+        n_estimators=50,
+        max_depth=3,
+        min_samples_split=10,
+        min_samples_leaf=5,
+    ),
     "KNN": KNeighborsClassifier(n_neighbors=5),
     "Gaussian NB": GaussianNB()
 }
