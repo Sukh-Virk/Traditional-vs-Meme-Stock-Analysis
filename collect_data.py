@@ -1,18 +1,22 @@
+#imports for data
 import requests
 import pandas as pd
-import feedparser
 from textblob import TextBlob
 from datetime import datetime
 import time
 
-API_KEY = "9BHS3YUMT2RNCZ3F" #my API key 
-BASE_URL = "https://www.alphavantage.co/query" #link to endpoint
-MEME_STOCKS = ["GME", "AMC", "BB"] #memstocks can change depending on  partners
-BLUECHIP_STOCKS = ["AAPL", "MSFT", "JNJ"] #traditional ones
-# all stocks, which include both
-ALL_STOCKS = MEME_STOCKS + BLUECHIP_STOCKS
+#api key for alpha vantage stock info
+API_KEY = "9BHS3YUMT2RNCZ3F"  # Alpha Vantage key
+BASE_URL = "https://www.alphavantage.co/query"
 
+#our meme stocks chosen by team
+memes = ["GME", "AMC", "BB"]
+#our bluechip stocks
+bs = ["AAPL", "MSFT", "JNJ"]
+#merge all
+alls = memes + bs
 
+#function to classify daily change
 def classify_change(pct):
     if pd.isna(pct):
         return None
@@ -23,9 +27,11 @@ def classify_change(pct):
     else:
         return "Stable"
 
-# --- Fetch and clean stock data ---
-def fetch_and_clean_stock_data(symbol, stock_type):
-    print(f"Fetching data for {symbol}...")
+#function for getting and cleaning stock data
+def cleanstockd(symbol, stock_type):
+    print(f"Fetching stock data for {symbol}...")
+
+    #setting parameters for API request
     params = {
         "function": "TIME_SERIES_DAILY",
         "symbol": symbol,
@@ -33,17 +39,21 @@ def fetch_and_clean_stock_data(symbol, stock_type):
         "outputsize": "compact"
     }
 
+    #sending request to API
     response = requests.get(BASE_URL, params=params)
     data = response.json()
 
+    #checking if response contains expected data
     if "Time Series (Daily)" not in data:
         print(f"Error fetching {symbol}: {data}")
         return None
 
+    #convert data to DataFrame
     df = pd.DataFrame.from_dict(data["Time Series (Daily)"], orient="index")
     df.index = pd.to_datetime(df.index)
     df = df.sort_index()
 
+    #rename columns to readable format
     df.rename(columns={
         '1. open': 'Open',
         '2. high': 'High',
@@ -52,73 +62,105 @@ def fetch_and_clean_stock_data(symbol, stock_type):
         '5. volume': 'Volume'
     }, inplace=True)
 
+    #convert numeric columns
     for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
         df[col] = pd.to_numeric(df[col], errors='coerce')
 
+    #create new columns
     df["Daily Change %"] = df["Close"].pct_change() * 100
     df["7-Day Volatility"] = df["Daily Change %"].rolling(window=7).std()
     df["Is Volatile"] = df["7-Day Volatility"] > 5
     df["Percent Change Category"] = df["Daily Change %"].apply(classify_change)
+
+    #adding identifiers
     df["Symbol"] = symbol
     df["Stock Type"] = stock_type
     df["Date"] = df.index
 
     return df.reset_index(drop=True)
 
-# --- Fetch news headlines ---
-def fetch_stock_news(symbol):
-    print(f"Fetching news for {symbol}...")
-    rss_url = f"https://finance.yahoo.com/rss/headline?s={symbol}"
-    feed = feedparser.parse(rss_url)
-    news_data = []
+#function to get stocktwits messages
+def fetch_stocktwits_messages(symbol, total_messages=150):
+    print(f"Fetching StockTwits messages for {symbol}...")
 
-    for entry in feed.entries:
-        title = entry.title
-        published = datetime(*entry.published_parsed[:6])
-        sentiment = TextBlob(title).sentiment.polarity
+    messages = []
+    max_id = None
+    base_url = f"https://api.stocktwits.com/api/2/streams/symbol/{symbol}.json"
+    headers = {"User-Agent": "Mozilla/5.0"}
 
-        news_data.append({
-            "Symbol": symbol,
-            "Date": published.date(),  # returns a date object
-            "Headline": title,
-            "Sentiment": sentiment
-        })
+    while len(messages) < total_messages:
+        url = base_url
+        if max_id:
+            url += f"?max={max_id}"
 
-    return pd.DataFrame(news_data)
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            print(f"Failed to fetch StockTwits for {symbol}: {response.status_code}")
+            break
 
-# --- Main ---
+        batch = response.json().get("messages", [])
+        if not batch:
+            break
+
+        for msg in batch:
+            body = msg.get("body", "")
+            sentiment = TextBlob(body).sentiment.polarity
+            messages.append({
+                "Symbol": symbol,
+                "Date": pd.to_datetime(msg["created_at"]).date(),
+                "Headline": body,
+                "Sentiment": sentiment
+            })
+
+        max_id = batch[-1]["id"] - 1
+        time.sleep(1)
+
+    return pd.DataFrame(messages[:total_messages])
+
+#main function
 if __name__ == "__main__":
     all_data = []
     all_news = []
 
-    # Fetch stock data
-    for symbol in MEME_STOCKS:
-        df = fetch_and_clean_stock_data(symbol, "Meme")
+    #get data for memes
+    for mem in memes:
+        df = cleanstockd(mem, "Meme")
         if df is not None:
             all_data.append(df)
         time.sleep(15)
 
-    for symbol in BLUECHIP_STOCKS:
-        df = fetch_and_clean_stock_data(symbol, "Blue-Chip")
+    #get data for bluechips
+    for b in bs:
+        df = cleanstockd(b, "Blue-Chip")
         if df is not None:
             all_data.append(df)
         time.sleep(15)
 
-    # Fetch news data
-    for symbol in ALL_STOCKS:
-        news_df = fetch_stock_news(symbol)
-        all_news.append(news_df)
+    #get stocktwits messages
+    for s in alls:
+        news_df = fetch_stocktwits_messages(s, total_messages=150)
+        if not news_df.empty:
+            all_news.append(news_df)
 
-    # Combine data
+    #combine stock data
     combined_stock_df = pd.concat(all_data, ignore_index=True)
-    combined_news_df = pd.concat(all_news, ignore_index=True)
-
     combined_stock_df["Date"] = pd.to_datetime(combined_stock_df["Date"])
-    combined_news_df["Date"] = pd.to_datetime(combined_news_df["Date"])
 
-    # Merge on Symbol + Date
+    #combine news data
+    if all_news:
+        combined_news_df = pd.concat(all_news, ignore_index=True)
+        combined_news_df["Date"] = pd.to_datetime(combined_news_df["Date"])
+    else:
+        print(" No StockTwits messages were fetched.")
+
+        combined_news_df = pd.DataFrame(columns=["Symbol", "Date", "Headline", "Sentiment"])
+
+    #merge both datasets by symbol and date
     merged_df = pd.merge(combined_stock_df, combined_news_df, on=["Symbol", "Date"], how="left")
 
-    # Save to CSV
-    merged_df.to_csv("merged_stock_news.csv", index=False)
-    print(" Merged dataset saved as merged_stock_news.csv")
+
+    #save to CSV
+    merged_df.to_csv("StockandSentiment.csv", index=False)
+
+    print(" Dataset Saved")
+
