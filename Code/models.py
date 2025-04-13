@@ -66,13 +66,6 @@ for idx, (name, model) in enumerate(models.items(), 1):
     print("-" * 50)
     print(classification_report(y_test, y_pred, target_names=["Drop", "Stable", "Spike"], zero_division=0))
     
-    # Plot confusion matrix
-    plt.subplot(1, 3, idx)
-    cm = confusion_matrix(y_test, y_pred)
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["Drop", "Stable", "Spike"])
-    disp.plot(ax=plt.gca())
-    plt.title(f"Confusion Matrix - {name}")
-
 # Adjust layout and save combined confusion matrix plot
 plt.tight_layout()
 plt.savefig("confusion_matrix_combined.png")
