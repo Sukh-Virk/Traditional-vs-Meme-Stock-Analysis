@@ -22,7 +22,7 @@ print(f"\n Pulling headlines from {from_date} to {to_date}\n")
 combined_data = []
 
 for symbol, query in tickers.items():
-    print(f"🔍 Fetching articles for {symbol}...")
+    print(f"Fetching articles for {symbol}...")
 
     try:
         response = newsapi.get_everything(
