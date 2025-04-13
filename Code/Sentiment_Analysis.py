@@ -301,18 +301,26 @@ plt.grid(axis='y')
 plt.legend(title="Stock Type")
 plt.tight_layout()
 plt.savefig("sentiment_impact_by_type.png")
-plt.show()
 
 
-# Word Cloud for spike headlines
+
+
+
+
+
+# Generate word cloud from spike words
 spike_wordcloud = WordCloud(width=800, height=400, background_color='white').generate_from_frequencies(Counter(spike_words))
 
 plt.figure(figsize=(10, 5))
 plt.imshow(spike_wordcloud, interpolation='bilinear')
 plt.axis("off")
-plt.title("📈 Common Words in Spike Headlines")
+plt.title("Common Words in Spike Headlines")
 plt.tight_layout()
-plt.savefig("spike_wordcloud.png")
-plt.show()
+plt.savefig("spike_wordcloud.png") 
+
+
+print(f"Word cloud saved")
+
+
 
 
