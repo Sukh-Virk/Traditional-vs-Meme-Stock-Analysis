@@ -67,6 +67,6 @@ nltk.download("wordnet")
 
 
  ## Contributors:
- Sukhman Virk 301468202
+ Sukhman Virk
  Harsh Sidhu
 Aniyah Bohnen
