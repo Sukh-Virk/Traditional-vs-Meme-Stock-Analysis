@@ -59,4 +59,3 @@ for symbol, query in tickers.items():
 
 df_combined = pd.DataFrame(combined_data)
 df_combined.to_csv("newsapi_last_30_days_combined.csv", index=False)
-print(f"\nDone! Saved to newsapi_last_30_days_combined.csv")
