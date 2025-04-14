@@ -54,7 +54,7 @@ pip install newsapi-python
 
 ## How to Run the Project
 
-To run this project follow these steps. First run `python Code/news_data.py` and `python Code/Stocktwits_data.py`. These files will get the csv files needed for analysis. Examples can be found under the Data folder. Then run `python Code/Sentiment_Analysis.py`, `python Code/models.py` to do some analysis on each stocktype. Lastly, run `python Code/models.py` to see predictions on and differences between meme stocks and tradtional stocks. These files will output visuals. Examples can be found under visuals folder.
+To run this project follow these steps. First run `python Code/news_data.py` and `python Code/Stocktwits_data.py`. These files will get the csv files needed for analysis. Examples can be found under the Data folder. Then run `python Code/Sentiment_Analysis.py', `python Code/models.py`, and 'python Code/news_analysis.py' to do some analysis on each stocktype. Lastly, run `python Code/models.py` to see predictions on and differences between meme stocks and tradtional stocks. These files will output visuals. Examples can be found under visuals folder.
 
 
 ## NLTK Downloads
